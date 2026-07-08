@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استعلام سند</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Tahoma', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #666;
+            font-weight: bold;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px dashed #f5576c;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+        button:hover {
+            transform: translateY(-3px);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            word-break: break-all;
+        }
+        .found {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .not-found {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info-row {
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 5px;
+        }
+        .info-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+        }
+        hr {
+            margin: 15px 0;
+            border: 0.5px solid rgba(0,0,0,0.1);
+        }
+        a {
+            color: #667eea;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .loading-text {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            color: #f5576c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 استعلام سند در بلاک‌چین</h1>
+
+        <form id="verifyForm" onsubmit="return false;">
+            <div class="form-group">
+                <label for="fileInput">📎 انتخاب فایل برای بررسی:</label>
+                <input type="file" id="fileInput" name="file" required>
+            </div>
+            <button type="button" id="submitBtn" onclick="verifyDocument()">🔍 بررسی در بلاک‌چین</button>
+        </form>
+
+        <div id="loadingText" class="loading-text">⏳ در حال جستجو در بلاک‌چین... لطفاً صبر کنید</div>
+        <div id="messageBox" class="message"></div>
+
+        <a href="/">← بازگشت به صفحه اصلی</a>
+    </div>
+
+    <script>
+        async function verifyDocument() {
+            const fileInput = document.getElementById('fileInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const loadingText = document.getElementById('loadingText');
+            const messageBox = document.getElementById('messageBox');
+
+            // بررسی انتخاب فایل
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert('لطفاً یک فایل انتخاب کنید');
+                return;
+            }
+
+            // آماده‌سازی
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            // نمایش لودینگ
+            messageBox.style.display = 'none';
+            loadingText.style.display = 'block';
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ در حال بررسی...';
+
+            try {
+                console.log('Sending verify request...');
+                const response = await fetch('/verify/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                loadingText.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🔍 بررسی در بلاک‌چین';
+
+                if (data.status === 'found') {
+                    messageBox.className = 'message found';
+                    messageBox.style.display = 'block';
+                    messageBox.innerHTML =
+                        '<strong>✅ ' + (data.message || 'سند یافت شد') + '</strong>' +
+                        '<hr>' +
+                        '<div class="info-row"><span class="info-label">🔐 هش فایل:</span><span style="font-size: 12px;">' + (data.file_hash || 'نامشخص') + '</span></div>' +
+                        '<div class="info-row"><span class="info-label">🔗 تراکنش:</span><span style="font-size: 12px;">' + ((data.transaction_hash || 'نامشخص').substring(0, 30)) + '...</span></div>' +
+                        '<div class="info-row"><span class="info-label">📅 زمان ثبت:</span><span>' + (data.timestamp || 'نامشخص') + '</span></div>' +
+                        '<div class="info-row"><span class="info-label">📦 بلاک:</span><span>' + (data.block_number || 'نامشخص') + '</span></div>' +
+                        '<div class="info-row"><span class="info-label">⏰ تایم‌استمپ:</span><span>' + (data.blockchain_timestamp || 'نامشخص') + '</span></div>';
+                } else if (data.status === 'not_found') {
+                    messageBox.className = 'message not-found';
+                    messageBox.style.display = 'block';
+                    messageBox.innerHTML =
+                        '<strong>ℹ️ ' + (data.message || 'سند یافت نشد') + '</strong>' +
+                        '<hr>' +
+                        '<div class="info-row"><span class="info-label">🔐 هش فایل:</span><span style="font-size: 12px;">' + (data.file_hash || 'نامشخص') + '</span></div>' +
+                        '<p style="margin-top: 10px;">📝 می‌توانید این سند را در بلاک‌چین ثبت کنید.</p>';
+                } else {
+                    messageBox.className = 'message error';
+                    messageBox.style.display = 'block';
+                    messageBox.innerHTML = '<strong>❌ ' + (data.message || 'خطا در بررسی') + '</strong>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                loadingText.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🔍 بررسی در بلاک‌چین';
+                messageBox.className = 'message error';
+                messageBox.style.display = 'block';
+                messageBox.innerHTML = '<strong>❌ خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.</strong><br><small>' + error.message + '</small>';
+            }
+        }
+
+        console.log('Verify page loaded successfully');
+    </script>
+</body>
+</html>
